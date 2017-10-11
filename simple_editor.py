@@ -1,23 +1,70 @@
+"""
+Author: TRUONG Van Thanh
+Program: Simple Text Editor
+Date: 10 Oct 2017
+More information about tkinter: http://tkdocs.com
+How to use:
+    -open command line(terminal)
+    -python /path/to/simple_editor.py
+Make sure you run this program with python 3(recommended version 3.4 or newer)
+"""
 from tkinter import *
+
 def quit():
+    """
+    quit callback function: simply exit the program.
+    """
     exit()
 def cut_callback(context_text):
+    """
+    cut_callback: implement cut function(I just used built-in cut function of Text object)
+    context_text: Text object
+    """
     context_text.event_generate('<<Cut>>')
 def copy_callback(context_text):
+    """
+    copy callback: implement copy function
+    context_text: Text object
+    """
     context_text.event_generate('<<Copy>>')
 def paste_callback(context_text):
+    """
+    paster callback: implement paste function
+    context_text: Text object
+    """
     context_text.event_generate('<<Paste>>')
 def undo_callback(context_text):
+    """
+    undo callback: implement undo function
+    context_text: Text object
+    """
     context_text.event_generate('<<Undo>>')
 def redo_callback(context_text):
+    """
+    redo callback: implement redo fucntion
+    context_text: Text object
+    """
     context_text.event_generate('<<Redo>>')
+
 def select_all_callback(context_text, event=None):
+    """
+    select all callback: implement select all function
+    context_text: Text object
+    """
+    #just mark tag sel("selected") from beginning to the end of Text object 
     context_text.tag_add('sel', '1.0', 'end')
 def find_text_callback(master, context_text, event=None):
+    """
+    find text callback: implement find text function
+    master: the root frame(or toplevel window)
+    context_text: Text object
+    """
     def close_search_window():
+        """
+        close_search_window: remove all tag and close the search window
+        """
         context_text.tag_remove('match', '1.0', END)
         search_toplevel.destroy()
-        search_toplevel.protocol('WM_DELETE_WINDOW', close_search_window)
         return "break"
     search_toplevel = Toplevel(master)
     search_toplevel.title('Find text')
@@ -32,14 +79,18 @@ def find_text_callback(master, context_text, event=None):
     ignore_case_value = IntVar()
     Checkbutton(search_toplevel, text='Ignore Case', 
         variable=ignore_case_value).grid(row=1, column=0, sticky='e')
-    #Button(search_toplevel, text="Close", command=None).grid(row=1, column=2, sticky='e')
     Button(search_toplevel, text="Find All", underline=0, 
         command=lambda: search_output(search_entry_widget.get(), ignore_case_value.get(),
         context_text, search_toplevel, search_entry_widget)).grid(row=0, column=0,
                 sticky='e' + 'w', padx=2, pady=2)
+    #we replace the close button of the find window by close_search_window function
+    search_toplevel.protocol('WM_DELETE_WINDOW', close_search_window)
 
 def search_output(search_string, if_ignore_case, context_text, search_toplevel, search_box):
     context_text.tag_remove('match', '1.0', END)
+    """
+    search_output: find search_string and add match tag to the matching text
+    """
     matches_found = 0
     if search_string:
         start_pos = '1.0'
@@ -62,6 +113,9 @@ class Editor(Frame):
         self.master = master
         self.init_window()
     def init_window(self):
+        """
+        Just define the menu of program.
+        """
         self.master.title('Simple Text Editor')
         self.menu_bar = Menu(self.master)
         self.master.config(menu=self.menu_bar)
@@ -85,6 +139,7 @@ class Editor(Frame):
         self.scroll_bar.config(command=self.context_text.yview)
         self.scroll_bar.pack(side='right', fill='y')
 
+        #File menu
         self.file_menu.add_command(label='New', accelerator='Ctrl+N', compound='left', command=quit)
         self.file_menu.add_command(label='Open', accelerator='Ctrl+O', compound='left', command=quit)
         self.file_menu.add_command(label='Save', accelerator='Ctrl+S', compound='left', command=quit)
@@ -92,7 +147,7 @@ class Editor(Frame):
             compound='left', command=quit)
         self.file_menu.add_separator()
         self.file_menu.add_command(label='Exit', accelerator='Alt+F4', compound='left', command=quit)
-
+        #edit menu
         self.edit_menu.add_command(label='Undo', accelerator='Ctrl+Z', compound='left', 
             command=lambda : undo_callback(self.context_text))
         self.edit_menu.add_command(label='Redo', accelerator='Ctrl+Y', compound='left', 
@@ -108,6 +163,7 @@ class Editor(Frame):
         self.edit_menu.add_command(label='Find', accelerator='Ctrl+F',
             compound='left', command=lambda: find_text_callback(self.master, self.context_text))
         
+        #We bind shortcut with the function correspondence
         self.context_text.bind('<Control-x>', cut_callback(self.context_text))
         self.context_text.bind('<Control-X>', cut_callback(self.context_text))
         self.context_text.bind('<Control-c>', copy_callback(self.context_text))
@@ -123,9 +179,9 @@ class Editor(Frame):
         self.context_text.bind('<Control-a>', 
             lambda:select_all_callback(self.context_text))
         self.context_text.bind('<Control-F>',
-            lambda: find_text_callback(self.master, self.context_text))
+            lambda x: find_text_callback(self.master, self.context_text))
         self.context_text.bind('<Control-f>',
-            lambda: find_text_callback(self.master, self.context_text))
+            lambda x: find_text_callback(self.master, self.context_text))
 
 if __name__ == '__main__':
     root = Tk()
