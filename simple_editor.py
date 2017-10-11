@@ -241,7 +241,7 @@ class Editor(Frame):
             lambda: save_as(self.master, self.content_text, self.file_name))
         self.content_text.bind('<Control-n>',
             lambda: new_file(self.master, self.content_text, self.file_name))
-        self.content_text.bind('<Control-N', 
+        self.content_text.bind('<Control-N>', 
             lambda: new_file(self.master, self.content_text, self.file_name))
 
 if __name__ == '__main__':
