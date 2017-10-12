@@ -11,11 +11,14 @@ Make sure you run this program with python 3(recommended version 3.4 or newer)
 from tkinter import *
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 import os
-def quit():
+import tkinter.messagebox as tkmesbox
+def quit(master, event=None):
     """
     quit callback function: simply exit the program.
     """
-    exit()
+    if tkmesbox.askokcancel('Exit warning', 'Do you want to exit?'):
+        master.destroy()
+
 def cut_callback(content_text):
     """
     cut_callback: implement cut function(I just used built-in cut function of Text object)
@@ -118,7 +121,6 @@ def open_file(master, content_text, file_name, event=None):
         content_text.delete(1.0, END)
         with open(file_name) as _file:
             content_text.insert(1.0, _file.read())
-    return "break"
 
 def write_to_file(content_text, file_name):
     try:
@@ -126,14 +128,13 @@ def write_to_file(content_text, file_name):
         with open(file_name, 'w') as tmp_file:
             tmp_file.write(content)
     except IOError:
-        pass
+        tkmesbox.showerror(title='Show error', message='Can\'t save this file!')
 
 def save(master, content_text, file_name, event=None):
     if not file_name:
         save_as(content_text, file_name)
     else:
         write_to_file(content_text, file_name)
-    return "break"
 
 def save_as(master, content_text, file_name, event=None):
     input_file_name = asksaveasfilename(defaultextension=".txt",
@@ -142,12 +143,37 @@ def save_as(master, content_text, file_name, event=None):
         file_name = input_file_name
         write_to_file(content_text, file_name)
         master.title('{} - {}'.format(os.path.basename(file_name), 'Simple Text Editor'))
-    return "break"
 
 def new_file(master, content_text, file_name, event=None):
     master.title('Untitled')
     content_text.delete(1.0, END)
     file_name = None
+
+def about_callback(master, event=None):
+    """
+    just display about information using tkinker messagebox
+    """
+    tkmesbox.showinfo('About', 'Simple Text Editor 2017 - TVT')
+
+def help_callback(master, event=None):
+    """
+    Same as about_callback
+    """
+    tkmesbox.showinfo('Help', 'Please go to http://tkdocs.com')
+
+def line_numbers_get(content_text, show_line_num):
+    st = ''
+    if show_line_num.get():
+        row, col = content_text.index('end').split('.')
+        for i in range(1, int(row)):
+            st += str(i) + '\n'
+    return st
+def show_line_numbers(line_number_bar, content_text, show_line_num, event=None):
+    line_num_str = line_numbers_get(content_text, show_line_num)
+    line_number_bar.config(state='normal')
+    line_number_bar.delete('1.0', 'end')
+    line_number_bar.insert('1.0', line_num_str)
+    line_number_bar.config(state='disabled')
 
 class Editor(Frame):
     def __init__(self, master=None):
@@ -191,7 +217,8 @@ class Editor(Frame):
         self.file_menu.add_command(label='Save as', accelerator='Shift+Ctrl+S', 
             compound='left', command= lambda: save_as(self.master, self.content_text, self.file_name))
         self.file_menu.add_separator()
-        self.file_menu.add_command(label='Exit', accelerator='Alt+F4', compound='left', command=quit)
+        self.file_menu.add_command(label='Exit', accelerator='Alt+F4', compound='left',
+            command=lambda : quit(self.master))
         #edit menu
         self.edit_menu.add_command(label='Undo', accelerator='Ctrl+Z', compound='left', 
             command=lambda : undo_callback(self.content_text))
@@ -208,6 +235,16 @@ class Editor(Frame):
         self.edit_menu.add_command(label='Find', accelerator='Ctrl+F',
             compound='left', command=lambda: find_text_callback(self.master, self.content_text))
         
+        #Help menu
+        self.help_menu.add_command(label='Help', compound='left', 
+            command=lambda : help_callback(self.master))
+        self.help_menu.add_command(label='About', compound='left',
+            command=lambda : about_callback(self.master))
+        
+        #View menu
+        self.show_line_num = IntVar()
+        self.show_line_num.set(1)
+        self.view_menu.add_checkbutton(label='Show line number.', variable=self.show_line_num)
         #We bind the shortcut with the function correspondence
         self.content_text.bind('<Control-x>', lambda: cut_callback(self.content_text))
         self.content_text.bind('<Control-X>', lambda: cut_callback(self.content_text))
@@ -243,6 +280,12 @@ class Editor(Frame):
             lambda: new_file(self.master, self.content_text, self.file_name))
         self.content_text.bind('<Control-N>', 
             lambda: new_file(self.master, self.content_text, self.file_name))
+        self.content_text.bind('<Any-KeyPress>', 
+            lambda x: show_line_numbers(self.line_number_bar, self.content_text,
+                self.show_line_num))
+        #Replace close button window function by our quit function!
+        self.master.protocol('WM_DELETE_WINDOW', 
+            lambda : quit(self.master))
 
 if __name__ == '__main__':
     root = Tk()
