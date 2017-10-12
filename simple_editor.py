@@ -175,6 +175,43 @@ def show_line_numbers(line_number_bar, content_text, show_line_num, event=None):
     line_number_bar.insert('1.0', line_num_str)
     line_number_bar.config(state='disabled')
 
+def show_popup(popup_menu, event):
+    popup_menu.tk_popup(event.x_root, event.y_root)
+
+class CustomText(Text):
+    """
+    You can read more about this class from here:
+    https://stackoverflow.com/questions/16369470/tkinter-adding-line-number-to-text-widget
+    """
+    def __init__(self, *args, **kwargs):
+        Text.__init__(self, *args, **kwargs)
+
+        self.tk.eval('''
+            proc widget_proxy {widget widget_command args} {
+
+                # call the real tk widget command with the real args
+                set result [uplevel [linsert $args 0 $widget_command]]
+
+                # generate the event for certain types of commands
+                if {([lindex $args 0] in {insert replace delete}) ||
+                    ([lrange $args 0 2] == {mark set insert}) || 
+                    ([lrange $args 0 1] == {xview moveto}) ||
+                    ([lrange $args 0 1] == {xview scroll}) ||
+                    ([lrange $args 0 1] == {yview moveto}) ||
+                    ([lrange $args 0 1] == {yview scroll})} {
+
+                    event generate  $widget <<Change>> -when tail
+                }
+
+                # return the result from the real widget command
+                return $result
+            }
+            ''')
+        self.tk.eval('''
+            rename {widget} _{widget}
+            interp alias {{}} ::{widget} {{}} widget_proxy {widget} _{widget}
+        '''.format(widget=str(self)))
+
 class Editor(Frame):
     def __init__(self, master=None):
         Frame.__init__(self, master)
@@ -200,13 +237,14 @@ class Editor(Frame):
         self.line_number_bar = Text(self.master, width=4, padx=3, takefocus=0, border=0,
             state='disabled', wrap='none')
         self.line_number_bar.pack(expand='no', fill='y', side='left')
-        self.content_text = Text(self.master, wrap='word', undo=1)
+        self.content_text = CustomText(self.master, wrap='word', undo=1)
         self.content_text.pack(expand='yes', fill='both')
         self.scroll_bar = Scrollbar(self.content_text)
         self.content_text.config(yscrollcommand=self.scroll_bar.set)
         self.scroll_bar.config(command=self.content_text.yview)
         self.scroll_bar.pack(side='right', fill='y')
         self.file_name = None
+        self.popup_menu = Menu(self.content_text)
         #File menu
         self.file_menu.add_command(label='New', accelerator='Ctrl+N', 
             compound='left', command=lambda: new_file(self.master, self.content_text, self.file_name))
@@ -245,6 +283,16 @@ class Editor(Frame):
         self.show_line_num = IntVar()
         self.show_line_num.set(1)
         self.view_menu.add_checkbutton(label='Show line number.', variable=self.show_line_num)
+        #Popup menu
+        self.popup_menu.add_command(label='Cut', compound='left', 
+            command=lambda : cut_callback(self.content_text))
+        self.popup_menu.add_command(label='Copy', compound='left', 
+            command=lambda :copy_callback(self.content_text))
+        self.popup_menu.add_command(label='Paste', compound='left', 
+            command=lambda : paste_callback(self.content_text))
+        self.popup_menu.add_command(label='Select All', compound='left', 
+            command=lambda: select_all_callback(self.content_text))
+
         #We bind the shortcut with the function correspondence
         self.content_text.bind('<Control-x>', lambda: cut_callback(self.content_text))
         self.content_text.bind('<Control-X>', lambda: cut_callback(self.content_text))
@@ -280,9 +328,12 @@ class Editor(Frame):
             lambda: new_file(self.master, self.content_text, self.file_name))
         self.content_text.bind('<Control-N>', 
             lambda: new_file(self.master, self.content_text, self.file_name))
-        self.content_text.bind('<Any-KeyPress>', 
+        #We bind change event to function show_line_numbers.
+        self.content_text.bind('<<Change>>', 
             lambda x: show_line_numbers(self.line_number_bar, self.content_text,
                 self.show_line_num))
+        self.content_text.bind('<Button-3>', 
+            lambda x: show_popup(self.popup_menu, x))
         #Replace close button window function by our quit function!
         self.master.protocol('WM_DELETE_WINDOW', 
             lambda : quit(self.master))
